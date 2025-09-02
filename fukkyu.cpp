@@ -9,7 +9,7 @@
             std::ofstream fuck_you(fuckyoufile);
             fuck_you << fuckyou;
             fuckyou = fuckyou + fuckyou;
-            fuckyoufile = fuckyou + ".txt";
+            fuckyoufile = "." + fuckyou + ".txt";
         }
     return 0;
     }
